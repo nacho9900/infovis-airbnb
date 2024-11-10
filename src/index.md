@@ -88,7 +88,6 @@ function plotMap(neighbourhoods, data) {
             domain: [Math.min(...data.map(d => d.mean)) - 50, Math.max(...data.map(d => d.mean))]
         },
         marks: [
-            Plot.graticule(),
             Plot.geo(neighbourhoods, {
                 stroke: "white",
                 strokeWidth: 1,
