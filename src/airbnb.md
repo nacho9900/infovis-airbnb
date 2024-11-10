@@ -16,7 +16,13 @@ const selected = view(Inputs.select(options, {label: "Selecciona una ciudad"}));
 ```js
 const lisbon = FileAttachment("data/lisbon.csv").csv({typed: true, header: true});
 const paris = FileAttachment("data/paris.csv").csv({typed: true, header: true});
+const lisbonNeighbourhoods = FileAttachment("data/lisbon_neighbourhoods.json").json();
+const parisNeighbourhoods = FileAttachment("data/paris_neighbourhoods.json").json();
+```
 
+```js
+// This is a FeatureCollection with an array of features each one representing a neighbourhood as a MultiPolygon
+const selectedNeighbourhoods = selected === "Lisbon" ? lisbonNeighbourhoods : parisNeighbourhoods;
 const data = selected === "Lisbon" ? lisbon : paris;
 ```
 
@@ -58,6 +64,46 @@ const filteredData = data.filter((d) => d.count >= minCount && d.count <= maxCou
         <h2>Barrio más barato <span class="muted">/ ${filteredData.find((d) => d.mean === d3.min(filteredData, (d) => d.mean)).neighbourhood}</span></h2>
         <span class="big">${d3.min(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
     </div>  
+</div>
+
+```js
+function plotMap(neighbourhoods) {
+    const width = 975;
+    const height = 610;
+
+    const projection = d3.geoMercator();
+
+    projection.fitExtent([[0, 0], [width, height]], neighbourhoods);
+
+    return Plot.plot({
+        projection,
+        width,
+        height,
+        marks: [
+            Plot.graticule(),
+            Plot.geo(neighbourhoods, {
+                stroke: "white",
+                strokeWidth: 2,
+                fill: "lightgray", 
+                title: d => `Barrio: ${d.properties.neighbourhood}`, 
+                strokeOpacity: 1,
+                tip: true
+            }),
+            Plot.frame()
+        ]
+    });
+}
+```
+
+```js
+selectedNeighbourhoods
+```
+
+
+<div class="grid grid-cols-1">
+    <div class="card">
+        ${plotMap(selectedNeighbourhoods)}
+    </div>
 </div>
 
 ```js
