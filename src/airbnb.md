@@ -9,7 +9,7 @@ toc: false
 <!-- Load and transform the data -->
 
 ```js
-const options = ["Lisbon", "Paris"];
+const options = ["Paris", "Lisbon"];
 const selected = view(Inputs.select(options, {label: "Selecciona una ciudad"}));
 ```
 
@@ -67,25 +67,39 @@ const filteredData = data.filter((d) => d.count >= minCount && d.count <= maxCou
 </div>
 
 ```js
-function plotMap(neighbourhoods) {
+function plotMap(neighbourhoods, data) {
     const width = 975;
     const height = 610;
 
     const projection = d3.geoMercator();
-
     projection.fitExtent([[0, 0], [width, height]], neighbourhoods);
+
+    // Crear un mapa para acceder rápidamente al número de publicaciones por barrio
+    const dataMap = new Map(data.map(d => [d.neighbourhood, d.count]));
 
     return Plot.plot({
         projection,
         width,
         height,
+        color: {
+            legend: true,
+            type: "quantize",
+            scheme: "inferno",
+            domain: [0, Math.max(...data.map(d => d.count))]
+        },
         marks: [
             Plot.graticule(),
             Plot.geo(neighbourhoods, {
                 stroke: "white",
                 strokeWidth: 2,
-                fill: "lightgray", 
-                title: d => `Barrio: ${d.properties.neighbourhood}`, 
+                fill: d => {
+                    const count = dataMap.get(d.properties.neighbourhood) || 0; // Obtiene el número de publicaciones o 0 si no existe
+                    return count; // Devuelve el valor para la escala de color
+                },
+                title: d => {
+                    const count = dataMap.get(d.properties.neighbourhood) || 0;
+                    return `Barrio: ${d.properties.neighbourhood}\nPublicaciones: ${count}`;
+                },
                 strokeOpacity: 1,
                 tip: true
             }),
@@ -95,14 +109,9 @@ function plotMap(neighbourhoods) {
 }
 ```
 
-```js
-selectedNeighbourhoods
-```
-
-
 <div class="grid grid-cols-1">
     <div class="card">
-        ${plotMap(selectedNeighbourhoods)}
+        ${plotMap(selectedNeighbourhoods, filteredData)}
     </div>
 </div>
 
