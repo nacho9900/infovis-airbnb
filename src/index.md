@@ -98,7 +98,8 @@ function plotMap(neighbourhoods, data) {
                 },
                 title: d => {
                     const mean = dataMap.get(d.properties.neighbourhood)?.mean || 0;
-                    return `Barrio: ${d.properties.neighbourhood}\nPrecio promedio: ${mean}`;
+                    const count = dataMap.get(d.properties.neighbourhood)?.count || 0;
+                    return `Barrio: ${d.properties.neighbourhood}\nPrecio promedio: ${mean}\nNúmero de propiedades: ${count}`;
                 },
                 tip: true
             }),
@@ -122,7 +123,7 @@ function scatterPlotCountMean(data, {width} = {}) {
     const height = 400;
 
     return Plot.plot({
-        title: "Scatter Plot: Número de propiedades vs. Precios promedio",
+        title: "Número de propiedades vs. Precios promedio",
         width,
         height,
         x: {
@@ -151,7 +152,7 @@ function histogramCount(data, {width} = {}) {
     const height = 400;
 
     return Plot.plot({
-        title: "Histograma: Distribución del número de propiedades",
+        title: "Distribución del número de propiedades",
         width,
         height,
         x: {
@@ -163,7 +164,7 @@ function histogramCount(data, {width} = {}) {
             grid: true
         },
         marks: [
-            Plot.rectY(data, Plot.binX({y: "count"}, {
+            Plot.rectY(data, Plot.binX({y: "count", thresholds: 8}, {
                 x: "count",
                 fill: "steelblue",
                 title: d => `Número de propiedades: ${d.bin0} - ${d.bin1}\nCantidad de barrios: ${d.count}`,
