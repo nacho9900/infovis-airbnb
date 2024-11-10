@@ -74,8 +74,7 @@ function plotMap(neighbourhoods, data) {
     const projection = d3.geoMercator();
     projection.fitExtent([[0, 0], [width, height]], neighbourhoods);
 
-    // Crear un mapa para acceder rápidamente al número de publicaciones por barrio
-    const dataMap = new Map(data.map(d => [d.neighbourhood, d.count]));
+    const dataMap = new Map(data.map(d => [d.neighbourhood, d.mean]));
 
     return Plot.plot({
         projection,
@@ -83,9 +82,8 @@ function plotMap(neighbourhoods, data) {
         height,
         color: {
             legend: true,
-            type: "quantize",
-            scheme: "inferno",
-            domain: [0, Math.max(...data.map(d => d.count))]
+            scheme: "blues",
+            domain: [Math.min(...data.map(d => d.mean)) - 50, Math.max(...data.map(d => d.mean))]
         },
         marks: [
             Plot.graticule(),
@@ -93,12 +91,12 @@ function plotMap(neighbourhoods, data) {
                 stroke: "white",
                 strokeWidth: 2,
                 fill: d => {
-                    const count = dataMap.get(d.properties.neighbourhood) || 0; // Obtiene el número de publicaciones o 0 si no existe
-                    return count; // Devuelve el valor para la escala de color
+                    const mean = dataMap.get(d.properties.neighbourhood) || 0; // Obtiene el número de publicaciones o 0 si no existe
+                    return mean; // Devuelve el valor para la escala de color
                 },
                 title: d => {
-                    const count = dataMap.get(d.properties.neighbourhood) || 0;
-                    return `Barrio: ${d.properties.neighbourhood}\nPublicaciones: ${count}`;
+                    const mean = dataMap.get(d.properties.neighbourhood) || 0;
+                    return `Barrio: ${d.properties.neighbourhood}\nPrecio promedio: ${mean}`;
                 },
                 strokeOpacity: 1,
                 tip: true
