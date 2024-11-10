@@ -20,6 +20,16 @@ const paris = FileAttachment("data/paris.csv").csv({typed: true, header: true});
 const data = selected === "Lisbon" ? lisbon : paris;
 ```
 
+```js
+const minPropertiesCount = d3.min(data, (d) => d.count);
+const maxPropertiesCount = d3.max(data, (d) => d.count);
+const minCount = view(Inputs.range([minPropertiesCount, maxPropertiesCount], {label: "Número mínimo de propiedades", value: minPropertiesCount}));
+const maxCount = view(Inputs.range([minPropertiesCount, maxPropertiesCount], {label: "Número máximo de propiedades", value: maxPropertiesCount}));
+```
+
+```js
+const filteredData = data.filter((d) => d.count >= minCount && d.count <= maxCount);
+```
 
 
 <!-- Cards with big numbers -->
@@ -27,27 +37,101 @@ const data = selected === "Lisbon" ? lisbon : paris;
 <div class="grid grid-cols-3">
   <div class="card">
     <h2>Anuncios 🏠</h2>
-    <span class="big">${data.reduce((acc, d) => acc + d.count, 0).toLocaleString("en-US")}</span>
+    <span class="big">${filteredData.reduce((acc, d) => acc + d.count, 0).toLocaleString("en-US")}</span>
   </div>
   <div class="card">
     <h2>Barrios 📌</h2>
-    <span class="big">${d3.group(data, (d) => d.neighbourhood).size}</span>
+    <span class="big">${d3.group(filteredData, (d) => d.neighbourhood).size}</span>
   </div>
   <div class="card">
     <h2>Precio Promedio 💰</h2>
-    <span class="big">${d3.mean(data, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
+    <span class="big">${d3.mean(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
   </div>
 </div>
 
 <div class="grid grid-cols-2">
   <div class="card">
-    <h2>Barrio más caro <span class="muted">/ ${data.find((d) => d.mean === d3.max(data, (d) => d.mean)).neighbourhood}</span></h2>
-    <span class="big">${d3.max(data, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
+    <h2>Barrio más caro <span class="muted">/ ${filteredData.find((d) => d.mean === d3.max(filteredData, (d) => d.mean)).neighbourhood}</span></h2>
+    <span class="big">${d3.max(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
   </div>
     <div class="card">
-        <h2>Barrio más barato <span class="muted">/ ${data.find((d) => d.mean === d3.min(data, (d) => d.mean)).neighbourhood}</span></h2>
-        <span class="big">${d3.min(data, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
+        <h2>Barrio más barato <span class="muted">/ ${filteredData.find((d) => d.mean === d3.min(filteredData, (d) => d.mean)).neighbourhood}</span></h2>
+        <span class="big">${d3.min(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
     </div>  
+</div>
+
+```js
+function scatterPlotCountMean(data, {width} = {}) {
+    // Ordena los datos por el eje x (count) de menor a mayor
+    const sortedData = [...data].sort((a, b) => a.count - b.count);
+
+    // Define la altura del gráfico (opcional)
+    const height = 400;
+
+    return Plot.plot({
+        title: "Scatter Plot: Número de propiedades vs. Promedio",
+        width,
+        height,
+        x: {
+            label: "Número de propiedades",
+            grid: true
+        },
+        y: {
+            label: "Promedio",
+            grid: true
+        },
+        marks: [
+            Plot.dot(sortedData, {
+                x: "count",
+                y: "mean",
+                title: d => `Barrio: ${d.neighbourhood}\nNúmero de propiedades: ${d.count}\nPromedio: ${d.mean}`,
+                stroke: "black", // Contorno negro para destacar los puntos
+                fill: "steelblue", // Color de los puntos
+                tip: true // Habilita el tip para cada punto
+            })
+        ],
+    });
+}
+```
+
+<div class="grid grid-cols-1">
+    <div class="card">
+        ${resize((width) => scatterPlotCountMean(filteredData, {width}))}
+    </div>
+</div>
+
+```js
+function histogramCount(data, {width} = {}) {
+    const height = 400;
+
+    return Plot.plot({
+        title: "Histograma: Distribución del número de propiedades",
+        width,
+        height,
+        x: {
+            label: "Número de propiedades",
+            grid: true
+        },
+        y: {
+            label: "Cantidad de barrios",
+            grid: true
+        },
+        marks: [
+            Plot.rectY(data, Plot.binX({y: "count"}, {
+                x: "count",
+                fill: "steelblue",
+                title: d => `Número de propiedades: ${d.bin0} - ${d.bin1}\nCantidad de barrios: ${d.count}`,
+                tip: true
+            }))
+        ],
+    });
+}
+```
+
+<div class="grid grid-cols-1">
+    <div class="card">
+        ${resize((width) => histogramCount(filteredData, {width}))}
+    </div>
 </div>
 
 <!-- Plot of price per neighbourhood bar chart -->
@@ -55,11 +139,13 @@ const data = selected === "Lisbon" ? lisbon : paris;
 ```js
 function pricePerNeighbourhood(data, {width} = {}) {
     const sortedData = [...data].sort((a, b) => b.mean - a.mean);
+    
+    const height = sortedData.length * 20;
 
     return Plot.plot({
         title: "Precio promedio por barrio",
         width,
-        height: 2000,
+        height,
         y: {
             label: "",
             grid: true,
@@ -69,7 +155,7 @@ function pricePerNeighbourhood(data, {width} = {}) {
         x: {
             label: "Precio promedio"
         },
-        color: { legend: true, type: "linear", scheme: "inferno" },
+        color: { legend: true, type: "linear", scheme: "blues" },
         marks: [
             Plot.barX(sortedData, {
                 y: "neighbourhood",
@@ -82,7 +168,7 @@ function pricePerNeighbourhood(data, {width} = {}) {
                 y: "neighbourhood",
                 x: "mean",
                 text: d => d.neighbourhood,
-                fill: "white", // Cambia el color si es necesario para mejorar la visibilidad
+                fill: "black", // Cambia el color si es necesario para mejorar la visibilidad
                 dx: -10, // Ajusta la posición horizontal del texto
                 dy: 0, // Ajusta la posición vertical del texto
                 textAnchor: "end" // Alinea el texto a la derecha
@@ -95,6 +181,6 @@ function pricePerNeighbourhood(data, {width} = {}) {
 
 <div class="grid grid-cols-1">
     <div class="card">
-        ${resize((width) => pricePerNeighbourhood(data, {width}))}
+        ${resize((width) => pricePerNeighbourhood(filteredData, {width}))}
     </div>
 </div>
