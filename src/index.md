@@ -1,111 +1,235 @@
 ---
+title: Airbnb Dashboard
 toc: false
 ---
 
-<div class="hero">
-  <h1>Airbnb Dashboard</h1>
-  <h2>Welcome to your new app! Edit&nbsp;<code style="font-size: 90%;">src/index.md</code> to change this page.</h2>
-  <a href="https://observablehq.com/framework/getting-started">Get started<span style="display: inline-block; margin-left: 0.25rem;">↗︎</span></a>
-</div>
+# ${selected} Airbnb Dashboard
 
-<div class="grid grid-cols-2" style="grid-auto-rows: 504px;">
-  <div class="card">${
-    resize((width) => Plot.plot({
-      title: "Your awesomeness over time 🚀",
-      subtitle: "Up and to the right!",
-      width,
-      y: {grid: true, label: "Awesomeness"},
-      marks: [
-        Plot.ruleY([0]),
-        Plot.lineY(aapl, {x: "Date", y: "Close", tip: true})
-      ]
-    }))
-  }</div>
-  <div class="card">${
-    resize((width) => Plot.plot({
-      title: "How big are penguins, anyway? 🐧",
-      width,
-      grid: true,
-      x: {label: "Body mass (g)"},
-      y: {label: "Flipper length (mm)"},
-      color: {legend: true},
-      marks: [
-        Plot.linearRegressionY(penguins, {x: "body_mass_g", y: "flipper_length_mm", stroke: "species"}),
-        Plot.dot(penguins, {x: "body_mass_g", y: "flipper_length_mm", stroke: "species", tip: true})
-      ]
-    }))
-  }</div>
-</div>
+<!-- Load and transform the data -->
 
----
+```js
+const options = ["Paris", "Lisbon"];
+const selected = view(Inputs.select(options, {label: "Selecciona una ciudad"}));
+```
 
-## Next steps
+```js
+const lisbon = FileAttachment("data/lisbon.csv").csv({typed: true, header: true});
+const paris = FileAttachment("data/paris.csv").csv({typed: true, header: true});
+const lisbonNeighbourhoods = FileAttachment("data/lisbon_neighbourhoods.json").json();
+const parisNeighbourhoods = FileAttachment("data/paris_neighbourhoods.json").json();
+```
 
-Here are some ideas of things you could try…
+```js
+// This is a FeatureCollection with an array of features each one representing a neighbourhood as a MultiPolygon
+const selectedNeighbourhoods = selected === "Lisbon" ? lisbonNeighbourhoods : parisNeighbourhoods;
+const data = selected === "Lisbon" ? lisbon : paris;
+```
 
-<div class="grid grid-cols-4">
+```js
+const minPropertiesCount = d3.min(data, (d) => d.count);
+const maxPropertiesCount = d3.max(data, (d) => d.count);
+const minCount = view(Inputs.range([minPropertiesCount, maxPropertiesCount], {label: "Número mínimo de propiedades", value: minPropertiesCount}));
+const maxCount = view(Inputs.range([minPropertiesCount, maxPropertiesCount], {label: "Número máximo de propiedades", value: maxPropertiesCount}));
+```
+
+```js
+const filteredData = data.filter((d) => d.count >= minCount && d.count <= maxCount);
+```
+
+
+<!-- Cards with big numbers -->
+
+<div class="grid grid-cols-3">
   <div class="card">
-    Chart your own data using <a href="https://observablehq.com/framework/lib/plot"><code>Plot</code></a> and <a href="https://observablehq.com/framework/files"><code>FileAttachment</code></a>. Make it responsive using <a href="https://observablehq.com/framework/javascript#resize(render)"><code>resize</code></a>.
+    <h2>Anuncios 🏠</h2>
+    <span class="big">${filteredData.reduce((acc, d) => acc + d.count, 0).toLocaleString("en-US")}</span>
   </div>
   <div class="card">
-    Create a <a href="https://observablehq.com/framework/project-structure">new page</a> by adding a Markdown file (<code>whatever.md</code>) to the <code>src</code> folder.
+    <h2>Barrios 📌</h2>
+    <span class="big">${d3.group(filteredData, (d) => d.neighbourhood).size}</span>
   </div>
   <div class="card">
-    Add a drop-down menu using <a href="https://observablehq.com/framework/inputs/select"><code>Inputs.select</code></a> and use it to filter the data shown in a chart.
-  </div>
-  <div class="card">
-    Write a <a href="https://observablehq.com/framework/loaders">data loader</a> that queries a local database or API, generating a data snapshot on build.
-  </div>
-  <div class="card">
-    Import a <a href="https://observablehq.com/framework/imports">recommended library</a> from npm, such as <a href="https://observablehq.com/framework/lib/leaflet">Leaflet</a>, <a href="https://observablehq.com/framework/lib/dot">GraphViz</a>, <a href="https://observablehq.com/framework/lib/tex">TeX</a>, or <a href="https://observablehq.com/framework/lib/duckdb">DuckDB</a>.
-  </div>
-  <div class="card">
-    Ask for help, or share your work or ideas, on our <a href="https://github.com/observablehq/framework/discussions">GitHub discussions</a>.
-  </div>
-  <div class="card">
-    Visit <a href="https://github.com/observablehq/framework">Framework on GitHub</a> and give us a star. Or file an issue if you’ve found a bug!
+    <h2>Precio Promedio 💰</h2>
+    <span class="big">${d3.mean(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
   </div>
 </div>
 
-<style>
+<div class="grid grid-cols-2">
+  <div class="card">
+    <h2>Barrio más caro <span class="muted">/ ${filteredData.find((d) => d.mean === d3.max(filteredData, (d) => d.mean)).neighbourhood}</span></h2>
+    <span class="big">${d3.max(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
+  </div>
+    <div class="card">
+        <h2>Barrio más barato <span class="muted">/ ${filteredData.find((d) => d.mean === d3.min(filteredData, (d) => d.mean)).neighbourhood}</span></h2>
+        <span class="big">${d3.min(filteredData, (d) => d.mean).toLocaleString("en-US", {style: "currency", currency: "USD"})}</span>
+    </div>  
+</div>
 
-.hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-family: var(--sans-serif);
-  margin: 4rem 0 8rem;
-  text-wrap: balance;
-  text-align: center;
+```js
+function plotMap(neighbourhoods, data) {
+    const height = 610;
+
+    const projection = d3.geoMercator();
+    projection.fitExtent([[0, 0], [width, height]], neighbourhoods);
+
+    const dataMap = new Map(data.map(d => [d.neighbourhood, {
+        mean: d.mean,
+        count: d.count
+    }]));
+
+    return Plot.plot({
+        title: "Mapa de precios promedio por barrio",
+        projection,
+        width,
+        height,
+        color: {
+            legend: true,
+            scheme: "blues",
+            domain: [Math.min(...data.map(d => d.mean)) - 50, Math.max(...data.map(d => d.mean))]
+        },
+        marks: [
+            Plot.graticule(),
+            Plot.geo(neighbourhoods, {
+                stroke: "white",
+                strokeWidth: 1,
+                fill: d => {
+                    const mean = dataMap.get(d.properties.neighbourhood)?.mean;
+                    return mean ? mean : "black";
+                },
+                title: d => {
+                    const mean = dataMap.get(d.properties.neighbourhood)?.mean || 0;
+                    return `Barrio: ${d.properties.neighbourhood}\nPrecio promedio: ${mean}`;
+                },
+                tip: true
+            }),
+        ]
+    });
 }
+```
 
-.hero h1 {
-  margin: 1rem 0;
-  padding: 1rem 0;
-  max-width: none;
-  font-size: 14vw;
-  font-weight: 900;
-  line-height: 1;
-  background: linear-gradient(30deg, var(--theme-foreground-focus), currentColor);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+<div class="grid grid-cols-1">
+    <div class="card">
+        ${plotMap(selectedNeighbourhoods, filteredData)}
+    </div>
+</div>
+
+```js
+function scatterPlotCountMean(data, {width} = {}) {
+    // Ordena los datos por el eje x (count) de menor a mayor
+    const sortedData = [...data].sort((a, b) => a.count - b.count);
+
+    // Define la altura del gráfico (opcional)
+    const height = 400;
+
+    return Plot.plot({
+        title: "Scatter Plot: Número de propiedades vs. Precios promedio",
+        width,
+        height,
+        x: {
+            label: "Número de propiedades",
+            grid: true
+        },
+        y: {
+            label: "Promedio",
+            grid: true
+        },
+        marks: [
+            Plot.dot(sortedData, {
+                x: "count",
+                y: "mean",
+                title: d => `Barrio: ${d.neighbourhood}\nNúmero de propiedades: ${d.count}\nPromedio: ${d.mean}`,
+                stroke: "black", // Contorno negro para destacar los puntos
+                fill: "steelblue", // Color de los puntos
+                tip: true // Habilita el tip para cada punto
+            })
+        ],
+    });
 }
+```
+```js
+function histogramCount(data, {width} = {}) {
+    const height = 400;
 
-.hero h2 {
-  margin: 0;
-  max-width: 34em;
-  font-size: 20px;
-  font-style: initial;
-  font-weight: 500;
-  line-height: 1.5;
-  color: var(--theme-foreground-muted);
+    return Plot.plot({
+        title: "Histograma: Distribución del número de propiedades",
+        width,
+        height,
+        x: {
+            label: "Número de propiedades",
+            grid: true
+        },
+        y: {
+            label: "Cantidad de barrios",
+            grid: true
+        },
+        marks: [
+            Plot.rectY(data, Plot.binX({y: "count"}, {
+                x: "count",
+                fill: "steelblue",
+                title: d => `Número de propiedades: ${d.bin0} - ${d.bin1}\nCantidad de barrios: ${d.count}`,
+                tip: true
+            }))
+        ],
+    });
 }
+```
 
-@media (min-width: 640px) {
-  .hero h1 {
-    font-size: 90px;
-  }
+<div class="grid grid-cols-2">
+    <div class="card">
+        ${resize((width) => histogramCount(filteredData, {width}))}
+    </div>
+    <div class="card">
+        ${resize((width) => scatterPlotCountMean(filteredData, {width}))}
+    </div>
+</div>
+
+<!-- Plot of price per neighbourhood bar chart -->
+
+```js
+function pricePerNeighbourhood(data, {width} = {}) {
+    const sortedData = [...data].sort((a, b) => b.mean - a.mean);
+    
+    const height = sortedData.length * 20;
+
+    return Plot.plot({
+        title: "Precio promedio por barrio",
+        width,
+        height,
+        y: {
+            label: "",
+            grid: true,
+            domain: sortedData.map(d => d.neighbourhood),
+            axis: null
+        },
+        x: {
+            label: "Precio promedio"
+        },
+        color: { legend: true, type: "linear", scheme: "blues" },
+        marks: [
+            Plot.barX(sortedData, {
+                y: "neighbourhood",
+                x: "mean",
+                fill: "count",
+                title: d => `Precio: ${d.mean}`,
+                tip: true
+            }),
+            Plot.text(sortedData, {
+                y: "neighbourhood",
+                x: "mean",
+                text: d => d.neighbourhood,
+                fill: "black", // Cambia el color si es necesario para mejorar la visibilidad
+                dx: -10, // Ajusta la posición horizontal del texto
+                dy: 0, // Ajusta la posición vertical del texto
+                textAnchor: "end" // Alinea el texto a la derecha
+            }),
+            Plot.ruleY([0])
+        ],
+    });
 }
+```
 
-</style>
+<div class="grid grid-cols-1">
+    <div class="card">
+        ${resize((width) => pricePerNeighbourhood(filteredData, {width}))}
+    </div>
+</div>
