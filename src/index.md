@@ -89,12 +89,9 @@ function plotMap(neighbourhoods, data) {
         },
         marks: [
             Plot.geo(neighbourhoods, {
-                stroke: "white",
+                stroke: "black",
                 strokeWidth: 1,
-                fill: d => {
-                    const mean = dataMap.get(d.properties.neighbourhood)?.mean;
-                    return mean ? mean : "black";
-                },
+                fill: d => dataMap.get(d.properties.neighbourhood)?.mean || 0,
                 title: d => {
                     const mean = dataMap.get(d.properties.neighbourhood)?.mean || 0;
                     const count = dataMap.get(d.properties.neighbourhood)?.count || 0;
@@ -106,6 +103,8 @@ function plotMap(neighbourhoods, data) {
     });
 }
 ```
+
+## Donde estan ubicados los Airbnbs más caros en ${selected}?
 
 <div class="grid grid-cols-1">
     <div class="card">
@@ -160,19 +159,22 @@ function histogramCount(data, {width} = {}) {
         },
         y: {
             label: "Cantidad de barrios",
-            grid: true
+            grid: true,
         },
         marks: [
             Plot.rectY(data, Plot.binX({y: "count", thresholds: 8}, {
                 x: "count",
                 fill: "steelblue",
                 title: d => `Número de propiedades: ${d.bin0} - ${d.bin1}\nCantidad de barrios: ${d.count}`,
-                tip: true
             }))
         ],
     });
 }
 ```
+
+<div class="grid grid-cols-1">
+    <h2>Existe alguna relacion entre la cantidad de propiedades y el precio en los barrios de ${selected}?</h2>
+</div>
 
 <div class="grid grid-cols-2">
     <div class="card">
@@ -217,10 +219,10 @@ function pricePerNeighbourhood(data, {width} = {}) {
                 y: "neighbourhood",
                 x: "mean",
                 text: d => d.neighbourhood,
-                fill: "black", // Cambia el color si es necesario para mejorar la visibilidad
-                dx: -10, // Ajusta la posición horizontal del texto
-                dy: 0, // Ajusta la posición vertical del texto
-                textAnchor: "end" // Alinea el texto a la derecha
+                fill: "black",
+                dx: -10,
+                dy: 0,
+                textAnchor: "end"
             }),
             Plot.ruleY([0])
         ],
